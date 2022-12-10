@@ -1,0 +1,31 @@
+#linux python
+from mpi4py import MPI
+import numpy as np
+import random
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+N = comm.Get_size()
+P = 5000000
+
+if rank == 0:
+    mass = np.array([(random.uniform(0,1), random.uniform(0,1)) for i in range(N)])
+    for i in range(1, N):
+        comm.send(mass[0 : i * P // (N-1)], dest=i, tag=i)
+    for i in range(1, N):
+        PI, t = comm.recv(source=i, tag=i)
+        print("rank:",i)
+        print("time to execute:",t)
+        print("result of PI:",PI)
+        print("________")
+else:
+    mass = comm.recv(source=0, tag=rank)
+    num = 0
+    st = MPI.Wtime()
+    for x,y in mass:
+        if x**2 + y**2 <= 1:
+            num += 1
+    PI = 4*num / len(mass)
+    t = MPI.Wtime() - st
+    comm.send((PI,t), dest=0, tag=rank)
+MPI.Finalize()
